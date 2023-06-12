@@ -17,8 +17,15 @@ type searchOptions struct {
 	Terms         []string
 }
 
+const maxDepth = 5
+
 // Search searches for a query in a fs.
-func Search(fs afero.Fs, scope, query string, checker rules.Checker, found func(path string, f os.FileInfo) error) error {
+func Search(fs afero.Fs, scope, query string, checker rules.Checker, found func(path string, f os.FileInfo) error, depth int) error {
+	// Check if the maximum depth has been reached
+	if depth > maxDepth {
+		return nil
+	}
+
 	search := parseSearch(query)
 
 	scope = filepath.ToSlash(filepath.Clean(scope))
@@ -36,6 +43,17 @@ func Search(fs afero.Fs, scope, query string, checker rules.Checker, found func(
 
 		if !checker.Check(fPath) {
 			return nil
+		}
+
+		// Check if the file is a symbolic link
+		stat, err := os.Lstat(fPath)
+		if err != nil {
+			return err
+		}
+
+		if stat.Mode()&os.ModeSymlink != 0 {
+			// If it is a symbolic link, recursively search inside it
+			return Search(fs, fPath, query, checker, found, depth+1)
 		}
 
 		if len(search.Conditions) > 0 {

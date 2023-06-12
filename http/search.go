@@ -18,7 +18,7 @@ var searchHandler = withUser(func(w http.ResponseWriter, r *http.Request, d *dat
 		})
 
 		return nil
-	})
+	}, 0)
 
 	if err != nil {
 		return http.StatusInternalServerError, err
